@@ -1,0 +1,46 @@
+# Evaluation/requirements (no subir al repositorio)
+requirements.txt
+
+# Dependencies
+node_modules/
+
+# Environment variables (contain secrets)
+.env
+.env.local
+.env.*.local
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfvars
+!terraform/terraform.tfvars.example
+terraform/.terraform.lock.hcl
+*.tfplan
+
+# Logs and temp
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build and coverage
+dist/
+build/
+coverage/
+.nyc_output/
+
+# SSH keys (never commit)
+*.pem
+deployer_key
+deployer_key.pub
+
+# OS
+.DS_Store
+Thumbs.db

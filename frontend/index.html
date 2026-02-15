@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestion de Usuarios</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Gestion de Usuarios</h1>
+      <p class="subtitle">Microservicio - Arquitectura 3 capas</p>
+    </header>
+
+    <section class="form-section">
+      <h2>Crear usuario</h2>
+      <form id="userForm" class="form">
+        <div class="form-group">
+          <label for="name">Nombre</label>
+          <input type="text" id="name" name="name" required placeholder="Ej: Juan Perez">
+        </div>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required placeholder="Ej: juan@ejemplo.com">
+        </div>
+        <button type="submit" class="btn btn-primary">Crear usuario</button>
+      </form>
+    </section>
+
+    <section class="list-section">
+      <h2>Usuarios registrados</h2>
+      <div id="loading" class="loading" hidden>Cargando...</div>
+      <div id="error" class="error" hidden></div>
+      <ul id="userList" class="user-list"></ul>
+    </section>
+
+    <div id="modal" class="modal" hidden>
+      <div class="modal-content">
+        <span class="modal-close" id="modalClose">&times;</span>
+        <h2 id="modalTitle">Detalle de usuario</h2>
+        <form id="editForm" class="form">
+          <input type="hidden" id="editId">
+          <div class="form-group">
+            <label for="editName">Nombre</label>
+            <input type="text" id="editName" required>
+          </div>
+          <div class="form-group">
+            <label for="editEmail">Email</label>
+            <input type="email" id="editEmail" required>
+          </div>
+          <div class="modal-actions">
+            <button type="submit" class="btn btn-primary">Guardar</button>
+            <button type="button" class="btn btn-danger" id="btnDelete">Eliminar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

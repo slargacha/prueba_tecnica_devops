@@ -1,0 +1,19 @@
+# =============================================================================
+# Ejemplo de variables Terraform - Stack modular K8s
+# Copiar a terraform.tfvars y ajustar
+# =============================================================================
+
+aws_region   = "eu-west-1"
+environment  = "dev"
+project_name = "user-management"
+
+# Network
+vpc_cidr           = "10.0.0.0/16"
+enable_nat_gateway = true
+
+# EKS
+kubernetes_version  = "1.29"
+eks_instance_types  = ["t3.medium"]
+eks_node_desired_size = 2
+eks_node_min_size   = 1
+eks_node_max_size   = 3
