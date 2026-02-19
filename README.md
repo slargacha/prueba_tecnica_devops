@@ -81,9 +81,10 @@ Para el despliegue, se han implementado **dos estrategias complementarias**: un 
 | Componente | Tecnología |
 |------------|------------|
 | Contenedorización | Docker, Docker Compose |
-| Infraestructura | Terraform modular (Network, EKS, ECR, Monitoring) |
+| Infraestructura | Terraform modular (Network, EKS, ALB Controller, Monitoring) |
 | Orquestación | Kubernetes (EKS) |
 | Monitoreo | AWS CloudWatch |
+| CI/CD | GitHub Actions |
 
 ---
 
@@ -103,39 +104,65 @@ Para el despliegue, se han implementado **dos estrategias complementarias**: un 
 prueba_tecnica_devops/
 ├── backend/                 # Capa 2 - API REST
 │   ├── src/
-│   │   ├── config/
-│   │   ├── controllers/
-│   │   ├── db/
-│   │   ├── models/
-│   │   ├── routes/
-│   │   └── index.js
-│   ├── __tests__/           # Tests unitarios e integración
+│   │   ├── config/         # Configuración de base de datos
+│   │   ├── controllers/    # Lógica de negocio
+│   │   ├── db/             # Conexión y queries
+│   │   ├── models/         # Modelos de datos
+│   │   ├── routes/         # Rutas de la API
+│   │   └── index.js        # Punto de entrada
+│   ├── __tests__/          # Tests unitarios e integración
+│   │   ├── unit/           # Tests unitarios
+│   │   └── integration/    # Tests de integración
 │   ├── package.json
 │   ├── Dockerfile
+│   ├── Dockerfile.test     # Dockerfile para tests
 │   └── .eslintrc.js
-├── frontend/                 # Capa 1 - Presentación
+├── frontend/               # Capa 1 - Presentación
 │   ├── index.html
 │   ├── styles.css
 │   ├── app.js
-│   ├── nginx.conf
+│   ├── nginx.conf          # Configuración nginx + proxy
 │   └── Dockerfile
-├── terraform/               # Infraestructura modular
-│   ├── main.tf
+├── terraform/              # Infraestructura como Código
+│   ├── main.tf             # Configuración principal
+│   ├── variables.tf        # Variables de entrada
+│   ├── outputs.tf          # Outputs de recursos
+│   ├── providers.tf        # Proveedores AWS
+│   ├── backend.tf          # Backend S3 para state
 │   ├── modules/
-│   │   ├── network/
-│   │   ├── eks/
-│   │   ├── ecr/
-│   │   ├── alb-controller/
-│   │   └── monitoring/      # Módulo CloudWatch
+│   │   ├── network/        # VPC, Subnets, NAT Gateway
+│   │   ├── eks/            # Cluster EKS y Node Groups
+│   │   ├── alb-controller/ # IAM para ALB Controller
+│   │   └── monitoring/     # CloudWatch Logs y Métricas
 │   └── terraform.tfvars.example
-├── k8s/                     # Manifiestos Kubernetes
-├── .github/workflows/       # Pipelines CI/CD
+├── k8s/                    # Manifiestos Kubernetes
+│   ├── namespace.yaml
+│   ├── backend-deployment.yaml
+│   ├── backend-service.yaml
+│   ├── backend-secret.yaml
+│   ├── frontend-deployment.yaml
+│   ├── frontend-service.yaml
+│   ├── mysql-deployment.yaml
+│   ├── mysql-service.yaml
+│   ├── mysql-secret.yaml
+│   ├── mysql-configmap.yaml
+│   ├── ingress.yaml        # ALB Ingress
+│   ├── alb-controller-serviceaccount.yaml
+│   └── kustomization.yaml
+├── diagramas/              # Diagramas de arquitectura
+│   ├── diagrama_3_capas.png
+│   ├── arquitectura_aws.png
+│   ├── diagrama_pipeline.png
+│   ├── diagrama_secuencia.png
+│   └── diagrama_terraform.png
+├── .github/workflows/      # Pipelines CI/CD
 │   ├── ci.yml              # Tests y calidad
-│   └── deploy.yml          # Despliegue
-├── scripts/
+│   ├── deploy.yml          # Despliegue infraestructura y apps
+│   └── destroy-infrastructure.yml  # Destruir infraestructura
 ├── sonar-project.properties # Configuración SonarQube
-├── docker-compose.yml
+├── docker-compose.yml      # Despliegue local
 ├── TESTING.md              # Documentación de tests
+├── DEPLOYMENT.md           # Documentación de despliegue
 └── README.md
 ```
 
