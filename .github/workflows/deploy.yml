@@ -175,13 +175,16 @@ jobs:
       run: |
         cd terraform
         echo "📋 Generando plan de cambios..."
-        terraform plan -var="aws_region=${{ env.AWS_REGION }}" -out=tfplan -detailed-exitcode || exit_code=$?
+        set +e  # Desactivar exit on error temporalmente
+        terraform plan -var="aws_region=${{ env.AWS_REGION }}" -out=tfplan -detailed-exitcode
+        exit_code=$?
+        set -e  # Reactivar exit on error
         
         # Exit codes: 0 = no changes, 1 = error, 2 = changes detected
-        if [ "${exit_code}" == "0" ]; then
+        if [ $exit_code -eq 0 ]; then
           echo "changes=false" >> $GITHUB_OUTPUT
           echo "✅ No hay cambios en la infraestructura"
-        elif [ "${exit_code}" == "2" ]; then
+        elif [ $exit_code -eq 2 ]; then
           echo "changes=true" >> $GITHUB_OUTPUT
           echo "⚠️ Se detectaron cambios que serán aplicados"
         else
