@@ -132,6 +132,18 @@ jobs:
       run: |
         echo "cluster-name=prueba_devops-eks" >> $GITHUB_OUTPUT
 
+    # Verificar si la infraestructura ya existe
+    - name: Check if infrastructure exists
+      id: check-infra
+      run: |
+        if aws eks describe-cluster --name prueba_devops-eks --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "✅ Infraestructura existente detectada. Se aplicarán solo cambios incrementales."
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+          echo "📦 No se detectó infraestructura. Se creará desde cero."
+        fi
+
     # Instalación de Terraform
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
@@ -149,28 +161,49 @@ jobs:
         sed -i 's/^#   }/  }/' backend.tf
         sed -i 's/^# }/}/' backend.tf
 
-    # Inicialización de Terraform
+    # Inicialización de Terraform (lee state desde S3)
     - name: Terraform Init
       run: |
         cd terraform
+        echo "🔄 Inicializando Terraform y sincronizando con state remoto en S3..."
         terraform init
+        echo "✅ State sincronizado desde S3"
 
-    # Plan de Terraform
+    # Plan de Terraform (compara state con configuración actual)
     - name: Terraform Plan
+      id: plan
       run: |
         cd terraform
-        terraform plan -var="aws_region=${{ env.AWS_REGION }}" -out=tfplan
+        echo "📋 Generando plan de cambios..."
+        terraform plan -var="aws_region=${{ env.AWS_REGION }}" -out=tfplan -detailed-exitcode || exit_code=$?
+        
+        # Exit codes: 0 = no changes, 1 = error, 2 = changes detected
+        if [ "${exit_code}" == "0" ]; then
+          echo "changes=false" >> $GITHUB_OUTPUT
+          echo "✅ No hay cambios en la infraestructura"
+        elif [ "${exit_code}" == "2" ]; then
+          echo "changes=true" >> $GITHUB_OUTPUT
+          echo "⚠️ Se detectaron cambios que serán aplicados"
+        else
+          echo "❌ Error en terraform plan"
+          exit 1
+        fi
 
-    # Aplicación de Terraform
-    # IMPORTANTE: Esto actualiza automáticamente todas las políticas IAM,
-    # incluyendo las del ALB Controller con los permisos necesarios:
-    # - ec2:GetSecurityGroupsForVpc
-    # - elasticloadbalancing:DescribeListenerAttributes
-    # - elasticloadbalancing:AddTags (con condiciones correctas)
+    # Aplicación de Terraform (solo si hay cambios)
+    # IMPORTANTE: Terraform usa el state de S3 para determinar qué recursos ya existen
+    # y solo crea/modifica/elimina lo necesario (operación idempotente)
     - name: Terraform Apply
+      if: steps.plan.outputs.changes == 'true'
       run: |
         cd terraform
+        echo "🚀 Aplicando cambios incrementales..."
         terraform apply -auto-approve tfplan
+        echo "✅ Cambios aplicados exitosamente"
+    
+    - name: Skip Terraform Apply
+      if: steps.plan.outputs.changes == 'false'
+      run: |
+        echo "⏭️ No hay cambios en Terraform. Infraestructura ya está actualizada."
 
   # =============================================================================
   # Job 3: Despliegue/Actualización de aplicaciones en Kubernetes

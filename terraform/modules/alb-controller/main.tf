@@ -104,8 +104,8 @@ resource "aws_iam_policy" "alb_controller" {
         }
       },
       {
-        Effect   = "Allow"
-        Action   = ["elasticloadbalancing:AddTags"]
+        Effect = "Allow"
+        Action = ["elasticloadbalancing:AddTags"]
         Resource = [
           "arn:aws:elasticloadbalancing:*:*:targetgroup/*/*",
           "arn:aws:elasticloadbalancing:*:*:loadbalancer/net/*/*",
@@ -126,8 +126,8 @@ resource "aws_iam_policy" "alb_controller" {
         Resource = "*"
       },
       {
-        Effect   = "Allow"
-        Action   = ["elasticloadbalancing:AddTags", "elasticloadbalancing:RemoveTags"]
+        Effect = "Allow"
+        Action = ["elasticloadbalancing:AddTags", "elasticloadbalancing:RemoveTags"]
         Resource = [
           "arn:aws:elasticloadbalancing:*:*:targetgroup/*/*",
           "arn:aws:elasticloadbalancing:*:*:loadbalancer/net/*/*",
@@ -141,8 +141,8 @@ resource "aws_iam_policy" "alb_controller" {
         }
       },
       {
-        Effect   = "Allow"
-        Action   = ["elasticloadbalancing:AddTags", "elasticloadbalancing:RemoveTags"]
+        Effect = "Allow"
+        Action = ["elasticloadbalancing:AddTags", "elasticloadbalancing:RemoveTags"]
         Resource = [
           "arn:aws:elasticloadbalancing:*:*:listener/net/*/*/*",
           "arn:aws:elasticloadbalancing:*:*:listener/app/*/*/*",

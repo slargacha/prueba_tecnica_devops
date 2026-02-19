@@ -27,7 +27,7 @@ variable "kubernetes_version" {
 variable "instance_types" {
   description = "Tipos de instancia para los nodos"
   type        = list(string)
-  default     = ["t3.micro"]
+  default     = ["t3.small"]
 }
 
 variable "node_desired_size" {
