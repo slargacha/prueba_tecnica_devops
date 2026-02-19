@@ -1,14 +1,12 @@
-# =============================================================================
-# Frontend - Capa de presentación
-# Arquitectura 3 capas - Servido por nginx
-# =============================================================================
+# Dockerfile para el frontend
+# Usa nginx alpine para servir archivos estáticos y hacer proxy al backend
 
 FROM nginx:alpine
 
-# Copiar configuración de nginx con proxy al backend
+# Configuración de nginx: proxy inverso para /api y servir archivos estáticos
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copiar archivos estáticos
+# Archivos de la aplicación web
 COPY index.html styles.css app.js /usr/share/nginx/html/
 
 EXPOSE 80

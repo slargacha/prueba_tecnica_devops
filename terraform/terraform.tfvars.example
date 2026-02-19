@@ -1,19 +1,21 @@
 # =============================================================================
-# Ejemplo de variables Terraform - Stack modular K8s
+# Ejemplo de variables Terraform - prueba_devops
+# Valores por defecto orientados a Free Tier donde aplica
 # Copiar a terraform.tfvars y ajustar
 # =============================================================================
+# NOTA: EKS control plane (~73 USD/mes) y NAT Gateway tienen coste.
+# Free Tier: EC2 t3.micro 750 h/mes, ECR 500 MB, datos 15 GB salida.
+# =============================================================================
 
-aws_region   = "eu-west-1"
-environment  = "dev"
-project_name = "user-management"
+aws_region = "us-east-1"
 
 # Network
 vpc_cidr           = "10.0.0.0/16"
 enable_nat_gateway = true
 
-# EKS
-kubernetes_version  = "1.29"
-eks_instance_types  = ["t3.medium"]
-eks_node_desired_size = 2
-eks_node_min_size   = 1
-eks_node_max_size   = 3
+# EKS - instancias t3.micro (Free Tier: 750 h/mes; 1 nodo ~730 h)
+kubernetes_version    = "1.29"
+eks_instance_types    = ["t3.micro"]
+eks_node_desired_size = 1
+eks_node_min_size     = 1
+eks_node_max_size     = 2

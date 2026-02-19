@@ -1,8 +1,6 @@
 # =============================================================================
-# Modulo EKS - Cluster Kubernetes + Node Group
+# Modulo EKS - Cluster Kubernetes + Node Groups
 # =============================================================================
-
-data "aws_caller_identity" "current" {}
 
 # IAM Role para el cluster EKS
 resource "aws_iam_role" "cluster" {
@@ -50,7 +48,7 @@ resource "aws_eks_cluster" "main" {
   tags = merge(var.tags, { Name = var.cluster_name })
 }
 
-# IAM Role para el Node Group
+# IAM Role para Node Group
 resource "aws_iam_role" "node" {
   name = "${var.name_prefix}-eks-node-role"
 

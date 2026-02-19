@@ -1,37 +1,35 @@
-# =============================================================================
-# Docker Compose - Arquitectura 3 capas
-# Microservicio de Gestion de Usuarios - DevOps Evaluation A01
-# =============================================================================
-# Capa 1: Frontend (nginx) - Puerto 80
-# Capa 2: Backend (Node.js API) - Puerto 3000
-# Capa 3: Datos (MySQL) - Puerto 3306
-# =============================================================================
+# Configuración de Docker Compose para la app de gestión de usuario
+# Arquitectura de 3 capas: Frontend (nginx) -> Backend (Node.js) -> Base de datos (MySQL)
+# 
+# Nota: MySQL tarda unos 5 minutos en inicializar completamente la base de datos
+# Los servicios arrancan en orden: primero MySQL, luego el backend y finalmente el frontend
 
 services:
-  # ---------------------------------------------------------------------------
-  # Capa 1: Frontend - Interfaz de usuario
-  # ---------------------------------------------------------------------------
+  # Frontend: interfaz web con nginx
+  # Sirve los archivos estáticos y redirige las peticiones /api al backend
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: user-management-frontend
+    container_name: gestion-usuarios-frontend
     ports:
       - "80:80"
+    stop_grace_period: 5s
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - app-network
 
-  # ---------------------------------------------------------------------------
-  # Capa 2: Backend - API REST
-  # ---------------------------------------------------------------------------
+  # Backend: API REST con Node.js
+  # Maneja las operaciones CRUD de usuarios y expone endpoint /health para monitoreo
   api:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
-    container_name: user-management-api
+    container_name: gestion-usuarios-api
+    stop_grace_period: 5s
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -43,38 +41,43 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/health', r => { r.resume(); process.exit(r.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
     restart: unless-stopped
     networks:
       - app-network
 
-  # ---------------------------------------------------------------------------
-  # Capa 3: Datos - MySQL
-  # ---------------------------------------------------------------------------
+  # Base de datos MySQL
+  # IMPORTANTE: Los datos son temporales (sin volumen persistente)
+  # El healthcheck verifica que la tabla users esté creada antes de marcar como listo
+  # Se da un periodo de gracia de 5 minutos para la inicialización
   mysql:
     image: mysql:8.0
-    container_name: user-management-db
+    container_name: gestion-usuarios-db
+    stop_grace_period: 5s
+    command: --bind-address=0.0.0.0
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_PASSWORD:-root123}
       - MYSQL_DATABASE=users_db
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./src/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./backend/src/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "3306:3306"
+      - "3307:3306"
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD || exit 1"]
+      test: ["CMD", "sh", "-c", "mysql -uroot -p\"$$MYSQL_ROOT_PASSWORD\" users_db -e \"SELECT 1 FROM users LIMIT 1\" || exit 1"]
       interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 15
+      start_period: 300s
     restart: unless-stopped
     networks:
       - app-network
 
-volumes:
-  mysql_data:
-    driver: local
-
+# Red interna para comunicación entre servicios
 networks:
   app-network:
     driver: bridge

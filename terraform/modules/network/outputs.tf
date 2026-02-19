@@ -18,12 +18,12 @@ output "private_subnet_ids" {
   value       = aws_subnet.private[*].id
 }
 
-output "private_subnet_ids_for_eks" {
-  description = "IDs de subnets privadas (para EKS node group)"
-  value       = aws_subnet.private[*].id
+output "alb_security_group_id" {
+  description = "ID del security group del ALB"
+  value       = aws_security_group.alb.id
 }
 
-output "public_subnet_ids_for_eks" {
-  description = "IDs de subnets públicas (para EKS node group)"
-  value       = aws_subnet.public[*].id
+output "eks_nodes_security_group_id" {
+  description = "ID del security group de nodos EKS"
+  value       = aws_security_group.eks_nodes.id
 }

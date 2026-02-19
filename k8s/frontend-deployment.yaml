@@ -1,0 +1,24 @@
+# Reemplazar <AWS_ACCOUNT_ID> con tu ID de cuenta de AWS
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: ns-prueba-tecnica
+  labels:
+    app: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: FRONTEND_IMAGE_PLACEHOLDER
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80

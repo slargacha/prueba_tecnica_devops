@@ -7,57 +7,58 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <!-- Contenedor principal: formulario de alta y tabla de usuarios -->
   <div class="container">
-    <header class="header">
-      <h1>Gestion de Usuarios</h1>
-      <p class="subtitle">Microservicio - Arquitectura 3 capas</p>
-    </header>
-
-    <section class="form-section">
-      <h2>Crear usuario</h2>
-      <form id="userForm" class="form">
-        <div class="form-group">
-          <label for="name">Nombre</label>
-          <input type="text" id="name" name="name" required placeholder="Ej: Juan Perez">
+    <h1>Gestion de Usuarios</h1>
+    <form id="userForm" class="form">
+      <input type="text" id="name" placeholder="Nombre" required>
+      <input type="email" id="email" placeholder="Email" required>
+      <button type="submit" class="btn btn-primary">Crear</button>
+    </form>
+    <p id="message" class="message"></p>
+    <!-- Consultar por ID: muestra solo ese usuario en la lista -->
+    <div class="form consult-form">
+      <label for="searchId" class="consult-label">Consultar por ID</label>
+      <input type="number" id="searchId" placeholder="ID" min="1" step="1">
+      <button type="button" id="btnConsult" class="btn btn-primary">Consultar</button>
+      <button type="button" id="btnVerTodos" class="btn btn-secondary">Ver todos</button>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>ID</th><th>Nombre</th><th>Email</th><th>Acciones</th></tr>
+        </thead>
+        <tbody id="userList"></tbody>
+      </table>
+    </div>
+  </div>
+  <!-- Modal editar: formulario con nombre y email para actualizar usuario -->
+  <div id="modalOverlay" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-labelledby="modalTitle">
+      <h2 id="modalTitle" class="modal-title">Editar usuario</h2>
+      <form id="editForm" class="modal-form">
+        <input type="hidden" id="editId">
+        <label for="editName">Nombre</label>
+        <input type="text" id="editName" required>
+        <label for="editEmail">Email</label>
+        <input type="email" id="editEmail" required>
+        <div class="modal-actions">
+          <button type="button" id="modalCancel" class="btn btn-secondary">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
         </div>
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input type="email" id="email" name="email" required placeholder="Ej: juan@ejemplo.com">
-        </div>
-        <button type="submit" class="btn btn-primary">Crear usuario</button>
       </form>
-    </section>
-
-    <section class="list-section">
-      <h2>Usuarios registrados</h2>
-      <div id="loading" class="loading" hidden>Cargando...</div>
-      <div id="error" class="error" hidden></div>
-      <ul id="userList" class="user-list"></ul>
-    </section>
-
-    <div id="modal" class="modal" hidden>
-      <div class="modal-content">
-        <span class="modal-close" id="modalClose">&times;</span>
-        <h2 id="modalTitle">Detalle de usuario</h2>
-        <form id="editForm" class="form">
-          <input type="hidden" id="editId">
-          <div class="form-group">
-            <label for="editName">Nombre</label>
-            <input type="text" id="editName" required>
-          </div>
-          <div class="form-group">
-            <label for="editEmail">Email</label>
-            <input type="email" id="editEmail" required>
-          </div>
-          <div class="modal-actions">
-            <button type="submit" class="btn btn-primary">Guardar</button>
-            <button type="button" class="btn btn-danger" id="btnDelete">Eliminar</button>
-          </div>
-        </form>
+    </div>
+  </div>
+  <!-- Modal confirmar eliminación: Aceptar / Cancelar -->
+  <div id="confirmOverlay" class="modal-overlay" aria-hidden="true">
+    <div class="modal modal-confirm" role="dialog">
+      <p class="modal-confirm-text">¿Eliminar este usuario?</p>
+      <div class="modal-actions">
+        <button type="button" id="confirmCancel" class="btn btn-secondary">Cancelar</button>
+        <button type="button" id="confirmAccept" class="btn btn-danger">Aceptar</button>
       </div>
     </div>
   </div>
-
   <script src="app.js"></script>
 </body>
 </html>

@@ -1,126 +1,249 @@
-/* Frontend - Gestion de Usuarios - Arquitectura 3 capas */
-
-:root {
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --danger: #dc2626;
-  --danger-hover: #b91c1c;
-  --bg: #f8fafc;
-  --card-bg: #ffffff;
-  --text: #1e293b;
-  --text-muted: #64748b;
-  --border: #e2e8f0;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
+/* =============================================================================
+   Estilos - Gestión de Usuarios (Capa 1)
+   Contenedor, formulario, tabla, botones, modales (editar y confirmar).
+   ============================================================================= */
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: system-ui, -apple-system, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.6;
-  min-height: 100vh;
-}
-
-.container { max-width: 640px; margin: 0 auto; padding: 2rem 1rem; }
-
-.header { text-align: center; margin-bottom: 2rem; }
-.header h1 { font-size: 1.75rem; font-weight: 700; color: var(--text); }
-.subtitle { color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem; }
-
-.form-section, .list-section {
-  background: var(--card-bg);
-  border-radius: 8px;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  box-shadow: var(--shadow);
+  background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+  min-height: 100vh;
+  color: #1e293b;
 }
 
-.form-section h2, .list-section h2 {
-  font-size: 1rem;
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  background: #fff;
+  padding: 1.5rem 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+h1 {
+  font-size: 1.5rem;
   font-weight: 600;
+  margin-bottom: 1.25rem;
+  color: #0f172a;
+}
+
+/* Formulario */
+.form {
+  display: flex;
+  gap: 0.75rem;
   margin-bottom: 1rem;
-  color: var(--text);
+  flex-wrap: wrap;
+  align-items: center;
 }
 
-.form-group { margin-bottom: 1rem; }
-.form-group label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.375rem; color: var(--text); }
-.form-group input {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.875rem;
+.form input {
+  flex: 1;
+  min-width: 140px;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-.form-group input:focus {
+
+.form input:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
+/* Consultar por ID: label + input numérico + botones Consultar / Ver todos */
+.consult-form { margin-top: 0.5rem; margin-bottom: 0.75rem; }
+.consult-form .consult-label { font-size: 0.875rem; font-weight: 500; color: #475569; min-width: 6rem; }
+.consult-form input[type="number"] { max-width: 6rem; }
+
+.message {
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+  min-height: 1.25em;
+  color: #64748b;
+}
+
+.message.error {
+  color: #b91c1c;
+  font-weight: 500;
+}
+
+/* Botones */
 .btn {
   padding: 0.5rem 1rem;
   border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
+  border-radius: 8px;
+  font-size: 0.9375rem;
   font-weight: 500;
   cursor: pointer;
+  transition: background-color 0.2s, transform 0.05s;
 }
-.btn-primary { background: var(--primary); color: white; }
-.btn-primary:hover { background: var(--primary-hover); }
-.btn-danger { background: var(--danger); color: white; }
-.btn-danger:hover { background: var(--danger-hover); }
 
-.user-list { list-style: none; }
-.user-list li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--border);
+.btn:active {
+  transform: scale(0.98);
 }
-.user-list li:last-child { border-bottom: none; }
-.user-list .user-info { flex: 1; }
-.user-list .user-info strong { display: block; font-size: 0.875rem; }
-.user-list .user-info span { font-size: 0.75rem; color: var(--text-muted); }
-.user-list .user-actions button {
-  padding: 0.25rem 0.5rem;
+
+.btn-primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.btn-secondary {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.btn-secondary:hover {
+  background: #cbd5e1;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
+.btn-sm {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8125rem;
+  margin-right: 0.35rem;
+}
+
+/* Tabla */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  margin-top: 0.5rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.table th,
+.table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.table th {
+  background: #f8fafc;
   font-size: 0.75rem;
-  background: var(--primary);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
 }
-.user-list .user-actions button:hover { background: var(--primary-hover); }
 
-.loading, .error { text-align: center; padding: 1rem; }
-.error { color: var(--danger); background: #fef2f2; border-radius: 6px; }
+.table tbody tr:nth-child(odd) {
+  background: #fff;
+}
 
-.modal {
+.table tbody tr:nth-child(even) {
+  background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+.table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.table td {
+  font-size: 0.9375rem;
+  vertical-align: middle;
+}
+
+.table .empty-row {
+  text-align: center;
+  color: #94a3b8;
+  padding: 1.5rem;
+}
+
+.cell-actions {
+  white-space: nowrap;
+}
+
+/* Modales: overlay oscuro + ventana centrada (editar y confirmar eliminación) */
+.modal-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
 }
-.modal-content {
-  background: var(--card-bg);
-  padding: 1.5rem;
-  border-radius: 8px;
-  max-width: 400px;
+
+.modal-overlay.modal-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal {
+  background: #fff;
+  padding: 1.5rem 2rem;
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
   width: 90%;
-  position: relative;
+  max-width: 400px;
 }
-.modal-close {
-  position: absolute;
-  top: 1rem; right: 1rem;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--text-muted);
+
+.modal-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+  color: #0f172a;
 }
-.modal-close:hover { color: var(--text); }
-.modal-actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
+
+.modal-form label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #475569;
+  margin-bottom: 0.35rem;
+}
+
+.modal-form input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  margin-bottom: 1rem;
+}
+
+.modal-form input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+}
+
+/* Modal de confirmación: texto + botones Aceptar/Cancelar */
+.modal-confirm .modal-confirm-text {
+  margin-bottom: 1.25rem;
+  font-size: 1rem;
+  color: #334155;
+}

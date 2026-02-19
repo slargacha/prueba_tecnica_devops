@@ -1,6 +1,14 @@
 # Evaluation/requirements (no subir al repositorio)
 requirements.txt
 
+# Cursos y examenes (no subir al repositorio)
+cursos/
+examenes/
+logs_error_terraform/
+*.pdf
+*.docx
+*.pptx
+
 # Dependencies
 node_modules/
 
@@ -15,7 +23,6 @@ terraform/*.tfstate
 terraform/*.tfstate.*
 terraform/*.tfvars
 !terraform/terraform.tfvars.example
-terraform/.terraform.lock.hcl
 *.tfplan
 
 # Logs and temp
@@ -35,6 +42,7 @@ dist/
 build/
 coverage/
 .nyc_output/
+.scannerwork/
 
 # SSH keys (never commit)
 *.pem
@@ -44,3 +52,6 @@ deployer_key.pub
 # OS
 .DS_Store
 Thumbs.db
+examen_interactivo.html
+examen_avanzado.html
+CURSO_DEVOPS_CONCEPTOS.md

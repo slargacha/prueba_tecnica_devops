@@ -1,68 +1,66 @@
 # =============================================================================
-# Root - Stack modular para despliegue en Kubernetes
-# Microservicio de Gestion de Usuarios - DevOps Evaluation A01
-# =============================================================================
-# Modulos: network, eks, backend (ECR), frontend (ECR)
-# MySQL se despliega en K8s como StatefulSet (ver kubernetes/)
+# Root - Stack modular EKS (variante habitual)
+# VPC prueba_devops | 3 subnets publicas + 3 privadas en 3 AZs | us-east-1
 # =============================================================================
 
 locals {
-  name_prefix   = "${var.project_name}-${var.environment}"
-  cluster_name  = "${local.name_prefix}-eks"
+  name_prefix  = "prueba_devops"
+  vpc_name     = "prueba_devops"
+  cluster_name = "prueba_devops-eks"
   common_tags = {
-    Project     = "user-management-microservice"
-    Environment = var.environment
-    ManagedBy   = "Terraform"
+    Project   = "prueba_devops"
+    ManagedBy = "Terraform"
   }
 }
 
-# -----------------------------------------------------------------------------
-# Modulo Network
-# -----------------------------------------------------------------------------
+data "aws_caller_identity" "current" {}
+
 module "network" {
   source = "./modules/network"
 
-  name_prefix       = local.name_prefix
-  vpc_cidr          = var.vpc_cidr
+  name_prefix        = local.name_prefix
+  vpc_name           = local.vpc_name
+  region             = var.aws_region
+  vpc_cidr           = var.vpc_cidr
   enable_nat_gateway = var.enable_nat_gateway
-  eks_cluster_name  = local.cluster_name
-  tags              = local.common_tags
+  eks_cluster_name   = local.cluster_name
+  tags               = local.common_tags
 }
 
-# -----------------------------------------------------------------------------
-# Modulo EKS - Cluster Kubernetes
-# -----------------------------------------------------------------------------
 module "eks" {
   source = "./modules/eks"
 
-  name_prefix         = local.name_prefix
-  cluster_name        = local.cluster_name
-  subnet_ids          = concat(module.network.public_subnet_ids, module.network.private_subnet_ids)
-  node_subnet_ids     = module.network.private_subnet_ids
-  kubernetes_version  = var.kubernetes_version
-  instance_types      = var.eks_instance_types
-  node_desired_size   = var.eks_node_desired_size
-  node_min_size       = var.eks_node_min_size
-  node_max_size       = var.eks_node_max_size
-  tags                = local.common_tags
+  name_prefix        = local.name_prefix
+  cluster_name       = local.cluster_name
+  subnet_ids         = concat(module.network.public_subnet_ids, module.network.private_subnet_ids)
+  node_subnet_ids    = module.network.private_subnet_ids
+  kubernetes_version = var.kubernetes_version
+  instance_types     = var.eks_instance_types
+  node_desired_size  = var.eks_node_desired_size
+  node_min_size      = var.eks_node_min_size
+  node_max_size      = var.eks_node_max_size
+  tags               = local.common_tags
 }
 
-# -----------------------------------------------------------------------------
-# Modulo Backend - ECR para API
-# -----------------------------------------------------------------------------
-module "backend" {
-  source = "./modules/backend"
+module "alb_controller" {
+  source = "./modules/alb-controller"
 
-  repository_name = "${var.project_name}-api"
-  tags            = local.common_tags
+  name_prefix             = local.name_prefix
+  cluster_name            = local.cluster_name
+  cluster_oidc_issuer_url = module.eks.cluster_oidc_issuer_url
+  tags                    = local.common_tags
+
+  depends_on = [module.eks]
 }
 
-# -----------------------------------------------------------------------------
-# Modulo Frontend - ECR para frontend
-# -----------------------------------------------------------------------------
-module "frontend" {
-  source = "./modules/frontend"
+module "monitoring" {
+  source = "./modules/monitoring"
 
-  repository_name = "${var.project_name}-frontend"
-  tags            = local.common_tags
+  name_prefix        = local.name_prefix
+  cluster_name       = local.cluster_name
+  log_retention_days = var.log_retention_days
+  enable_eks_logging = var.enable_eks_logging
+  tags               = local.common_tags
+
+  depends_on = [module.eks]
 }

@@ -1,27 +1,72 @@
-# Microservicio de Gestión de Usuarios
+# App de Gestión de Usuarios
 
-**DevOps Evaluation A01** - Aplicación de gestión de usuarios con **arquitectura de 3 capas**: Frontend (nginx), Backend (Node.js + Express) y Capa de datos (MySQL).
+Aplicación de gestión de usuarios con **arquitectura de 3 capas**: Frontend (nginx), Backend (Node.js + Express) y Capa de datos (MySQL).
 
-## Tabla de Contenidos
+## 📋 Tabla de Contenidos
 
+- [Contexto](#contexto)
 - [Descripción](#descripción)
+- [Arquitectura y Diagramas](#arquitectura-y-diagramas)
 - [Requisitos](#requisitos)
 - [Estructura del Proyecto](#estructura-del-proyecto)
+- [Testing y Calidad de Código](#testing-y-calidad-de-código)
 - [Despliegue Local (Docker Compose)](#despliegue-local-docker-compose)
-- [Despliegue en AWS (Terraform)](#despliegue-en-aws-terraform)
+- [Despliegue Automatizado con GitHub Actions](#despliegue-automatizado-con-github-actions)
+- [Monitoreo y Observabilidad](#monitoreo-y-observabilidad)
 - [API Reference](#api-reference)
 - [Variables de Entorno](#variables-de-entorno)
 
 ---
 
+## 🎯 Contexto
+
+Se requiere la creación de una **aplicación web para la gestión de usuarios** que permita realizar operaciones CRUD (Crear, Leer, Actualizar, Eliminar) de manera eficiente y escalable. La aplicación debe implementar una **API REST funcional** para la gestión de usuarios con información básica como nombre y email, garantizando la integridad y persistencia de los datos.
+
+La solución debe estar basada en una **arquitectura containerizada con Docker** para asegurar la portabilidad entre diferentes entornos, desde desarrollo local hasta producción. Se necesita implementar **infraestructura en la nube** utilizando Terraform como herramienta de Infrastructure as Code (IaC), permitiendo el aprovisionamiento automatizado y reproducible de todos los recursos necesarios en AWS.
+
+---
+
 ## Descripción
 
-Microservicio que permite:
+### Funcionalidades Principales
 
-- **Crear** un nuevo usuario (nombre y email)
-- **Obtener** información de usuario por ID
-- **Actualizar** información de usuario existente (opcional)
-- **Eliminar** usuario existente (opcional)
+La aplicación de gestión de usuarios implementa un conjunto completo de operaciones CRUD que permite:
+
+- **Crear** un nuevo usuario con validación de datos (nombre y email)
+- **Obtener** información detallada de usuario por ID único
+- **Listar** todos los usuarios registrados en el sistema
+- **Actualizar** información de usuario existente con validaciones
+- **Eliminar** usuario del sistema de forma segura
+
+### Solución Propuesta
+
+La solución implementa una **arquitectura de microservicios moderna** utilizando contenedores Docker y orquestación con Kubernetes. El sistema está diseñado con una separación clara de responsabilidades mediante una arquitectura de 3 capas que garantiza escalabilidad, mantenibilidad y alta disponibilidad.
+
+El **frontend** utiliza tecnologías web estándar (HTML5, CSS3, JavaScript) servidas a través de nginx como servidor web optimizado, proporcionando una interfaz de usuario intuitiva y responsiva. El **backend** está desarrollado en Node.js con Express.js, implementando una API REST robusta con manejo de errores, validaciones y logging estructurado. La **capa de datos** utiliza MySQL 8.0 como sistema de gestión de base de datos relacional, asegurando la consistencia e integridad de la información.
+
+Para el despliegue, se han implementado **dos estrategias complementarias**: un entorno de desarrollo local usando Docker Compose que permite pruebas rápidas y desarrollo ágil, y un despliegue automatizado en AWS EKS mediante pipelines CI/CD con GitHub Actions. La infraestructura se gestiona completamente como código usando Terraform, incluyendo la creación de VPC, subnets, cluster EKS, repositorios ECR y configuración del Application Load Balancer para alta disponibilidad y distribución de carga.
+
+## 🏢 Arquitectura y Diagramas
+
+### 1. 📊 Arquitectura de la Aplicación (3 Capas)
+
+![Diagrama de 3 Capas](./diagramas/diagrama_3_capas.png)
+
+### 2. 🌐 Arquitectura de Infraestructura AWS
+
+![Arquitectura AWS](./diagramas/arquitectura_aws.png)
+
+### 3. 🚀 Pipeline CI/CD con GitHub Actions
+
+![Pipeline CI/CD](./diagramas/diagrama_pipeline.png)
+
+### 4. 🔄 Flujo de Datos y Comunicación
+
+![Diagrama de Secuencia](./diagramas/diagrama_secuencia.png)
+
+### 5. 🛠️ Componentes de Terraform (Infraestructura como Código)
+
+![Diagrama Terraform](./diagramas/diagrama_terraform.png)
 
 ### Arquitectura 3 capas
 
@@ -36,8 +81,9 @@ Microservicio que permite:
 | Componente | Tecnología |
 |------------|------------|
 | Contenedorización | Docker, Docker Compose |
-| Infraestructura | Terraform modular (Network, EKS, ECR) |
-| Orquestación | Kubernetes (EKS) - MySQL como StatefulSet |
+| Infraestructura | Terraform modular (Network, EKS, ECR, Monitoring) |
+| Orquestación | Kubernetes (EKS) |
+| Monitoreo | AWS CloudWatch |
 
 ---
 
@@ -55,43 +101,95 @@ Microservicio que permite:
 
 ```
 prueba_tecnica_devops/
+├── backend/                 # Capa 2 - API REST
+│   ├── src/
+│   │   ├── config/
+│   │   ├── controllers/
+│   │   ├── db/
+│   │   ├── models/
+│   │   ├── routes/
+│   │   └── index.js
+│   ├── __tests__/           # Tests unitarios e integración
+│   ├── package.json
+│   ├── Dockerfile
+│   └── .eslintrc.js
 ├── frontend/                 # Capa 1 - Presentación
 │   ├── index.html
 │   ├── styles.css
 │   ├── app.js
 │   ├── nginx.conf
 │   └── Dockerfile
-├── src/                      # Capa 2 - Backend
-│   ├── config/
-│   │   └── database.js      # Configuración MySQL
-│   ├── controllers/
-│   │   └── users.controller.js
-│   ├── db/
-│   │   └── init.sql         # Schema inicial
-│   ├── models/
-│   │   └── user.model.js
-│   ├── routes/
-│   │   └── users.routes.js
-│   └── index.js             # Entrada de la aplicación
-├── terraform/               # Infraestructura modular (EKS + ECR)
-│   ├── main.tf              # Orquestación de módulos
+├── terraform/               # Infraestructura modular
+│   ├── main.tf
 │   ├── modules/
-│   │   ├── network/         # VPC, subnets, NAT
-│   │   ├── eks/             # Cluster Kubernetes
-│   │   ├── backend/         # ECR para API
-│   │   └── frontend/        # ECR para frontend
+│   │   ├── network/
+│   │   ├── eks/
+│   │   ├── ecr/
+│   │   ├── alb-controller/
+│   │   └── monitoring/      # Módulo CloudWatch
 │   └── terraform.tfvars.example
-├── kubernetes/              # Manifiestos K8s
-│   ├── mysql/               # StatefulSet + Service
-│   └── README.md
+├── k8s/                     # Manifiestos Kubernetes
+├── .github/workflows/       # Pipelines CI/CD
+│   ├── ci.yml              # Tests y calidad
+│   └── deploy.yml          # Despliegue
 ├── scripts/
-│   ├── build-and-push-ecr.sh
-│   └── build-and-push-ecr.ps1
-├── Dockerfile
+├── sonar-project.properties # Configuración SonarQube
 ├── docker-compose.yml
-├── package.json
+├── TESTING.md              # Documentación de tests
 └── README.md
 ```
+
+---
+
+## 🧪 Testing y Calidad de Código
+
+El proyecto implementa una estrategia completa de testing y análisis de calidad:
+
+### Tests Implementados
+
+- ✅ **Tests Unitarios** - Modelos y controladores con Jest
+- ✅ **Tests de Integración** - API completa con Supertest
+- ✅ **Cobertura de Código** - Reportes con LCOV
+- ✅ **Linting** - ESLint para estándares de código
+- ✅ **Security Audit** - npm audit para vulnerabilidades
+- ✅ **SonarQube Cloud** - Análisis continuo de calidad
+
+### Ejecutar Tests Localmente
+
+```bash
+# Todos los tests con cobertura
+cd backend && npm test
+
+# Solo tests unitarios
+npm run test:unit
+
+# Solo tests de integración
+npm run test:integration
+
+# Linting
+npm run lint
+
+# Ejecutar todos los checks (simula CI)
+./scripts/run-quality-checks.sh
+```
+
+### Pipeline CI/CD
+
+**CI Pipeline** (`.github/workflows/ci.yml`):
+1. Lint → Tests → Security Audit → SonarQube
+2. Se ejecuta en cada push y PR
+
+**CD Pipeline** (`.github/workflows/deploy.yml`):
+1. Solo se ejecuta si CI pasa
+2. Build → Deploy a AWS EKS
+
+Ver [TESTING.md](TESTING.md) para documentación completa.
+
+### Configurar SonarQube Cloud
+
+1. Crear cuenta en https://sonarcloud.io
+2. Editar `sonar-project.properties` con tu organización
+3. Agregar `SONAR_TOKEN` en GitHub Secrets
 
 ---
 
@@ -106,8 +204,8 @@ docker-compose up -d
 # 2. Acceder a la aplicación (Frontend en puerto 80)
 # Navegador: http://localhost
 
-# 3. API directamente (Backend en puerto 3000)
-curl http://localhost:3000/health
+# 3. API (a través de nginx en /api)
+curl http://localhost/api/health
 ```
 
 ### Pasos detallados
@@ -118,83 +216,173 @@ curl http://localhost:3000/health
    cd prueba_tecnica_devops
    ```
 
-2. **Configurar variables (opcional)**
-   ```bash
-   # Por defecto usa: DB_PASSWORD=postgres123
-   # Para cambiar: export DB_PASSWORD=mi_password
-   ```
-
-3. **Levantar servicios**
+2. **Levantar servicios**
    ```bash
    docker-compose up -d
    ```
 
-4. **Verificar**
+3. **Verificar**
    - **Frontend (Capa 1):** http://localhost
-   - **Backend (Capa 2):** http://localhost:3000
-   - **Health:** http://localhost:3000/health
-   - **MySQL (Capa 3):** localhost:3306 (usuario: root, BD: users_db)
-
-### Ejemplos de uso (API)
-
-```bash
-# Crear usuario
-curl -X POST http://localhost:3000/users \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Juan Pérez","email":"juan@ejemplo.com"}'
-
-# Obtener usuario (usar el ID devuelto)
-curl http://localhost:3000/users/<UUID>
-
-# Actualizar usuario
-curl -X PUT http://localhost:3000/users/<UUID> \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Juan García"}'
-
-# Eliminar usuario
-curl -X DELETE http://localhost:3000/users/<UUID>
-```
+   - **API (a través de nginx):** http://localhost/api/users
+   - **Health:** http://localhost/api/health
+   - **MySQL (Capa 3):** localhost:3307 (usuario: root, BD: users_db)
 
 ---
 
-## Despliegue en AWS (Terraform + Kubernetes)
+## Despliegue Automatizado con GitHub Actions
 
-Stack modular: **Network**, **EKS**, **Backend (ECR)**, **Frontend (ECR)**. MySQL se despliega en K8s como StatefulSet.
+### 🚀 Despliegue Automático Completo
 
-### Prerrequisitos
+El proyecto utiliza GitHub Actions para automatizar completamente el proceso de despliegue:
 
-- **AWS CLI** configurado (`aws configure`)
-- **kubectl** instalado
-- **Docker** para build de imágenes
+1. ✅ **Build y Push de Imágenes Docker** a AWS ECR
+2. ✅ **Despliegue de Infraestructura** con Terraform
+3. ✅ **Despliegue de Manifiestos K8s** en EKS
 
-### Pasos de despliegue
+**Triggers automáticos:**
+- Push a ramas `main` o `develop`
+- Pull requests hacia `main`
+- Ejecución manual desde GitHub Actions
 
-1. **Terraform** - Infraestructura:
-   ```bash
-   cd terraform
-   cp terraform.tfvars.example terraform.tfvars
-   terraform init && terraform apply
+### Configuración Inicial
+
+1. **Configurar Secrets en GitHub:**
+   ```
+   AWS_ACCESS_KEY_ID: Tu AWS Access Key ID
+   AWS_SECRET_ACCESS_KEY: Tu AWS Secret Access Key
    ```
 
-2. **Configurar kubectl**:
+2. **Hacer push al repositorio:**
    ```bash
-   aws eks update-kubeconfig --region eu-west-1 --name user-management-dev-eks
+   git push origin main
    ```
 
-3. **Desplegar MySQL** en Kubernetes:
-   ```bash
-   kubectl apply -k kubernetes/mysql/
-   ```
+3. **Monitorear el despliegue:**
+   - Ve a Actions en tu repositorio de GitHub
+   - Observa el progreso del pipeline "Deploy Infrastructure and Applications"
 
-4. **Push imágenes** a ECR:
-   ```bash
-   ./scripts/build-and-push-ecr.sh eu-west-1 backend
-   ./scripts/build-and-push-ecr.sh eu-west-1 frontend
-   ```
+### 🛠️ Despliegue Manual con Terraform (Alternativo)
 
-5. **Desplegar backend y frontend** en K8s (Deployments, Services, Ingress).
+Si prefieres desplegar la infraestructura manualmente en AWS:
 
-Ver [terraform/DEPLOYMENT.md](terraform/DEPLOYMENT.md) y [kubernetes/README.md](kubernetes/README.md) para detalles.
+```bash
+# 1. Configurar credenciales AWS
+export AWS_ACCESS_KEY_ID="tu-access-key"
+export AWS_SECRET_ACCESS_KEY="tu-secret-key"
+export AWS_DEFAULT_REGION="us-east-1"
+
+# 2. Navegar al directorio de Terraform
+cd terraform
+
+# 3. Inicializar y aplicar
+terraform init
+terraform plan
+terraform apply
+```
+
+**Nota:** El despliegue manual requiere configurar posteriormente las imágenes Docker y manifiestos de Kubernetes manualmente.
+
+### 📊 Comandos Útiles para Monitoreo
+
+```bash
+# Conectar a tu cluster EKS
+aws eks update-kubeconfig --region us-east-1 --name <cluster-name>
+
+# Ver estado de la aplicación
+kubectl get pods -n ns-prueba-tecnica
+kubectl get services -n ns-prueba-tecnica
+kubectl get ingress -n ns-prueba-tecnica
+
+# Ver logs
+kubectl logs -f deployment/backend -n ns-prueba-tecnica
+kubectl logs -f deployment/frontend -n ns-prueba-tecnica
+```
+
+Ver [DEPLOYMENT.md](DEPLOYMENT.md) para detalles completos del pipeline.
+
+---
+
+## 📊 Monitoreo y Observabilidad
+
+La aplicación implementa una estrategia completa de monitoreo utilizando **AWS CloudWatch** para garantizar la visibilidad, trazabilidad y detección proactiva de problemas en la infraestructura y aplicaciones.
+
+### Componentes Monitoreados
+
+El sistema de monitoreo está configurado mediante Terraform (módulo `monitoring`) y cubre los siguientes componentes críticos:
+
+#### 1. **Cluster EKS**
+- **Control Plane Logs**: Logs de API server, audit, authenticator, controller manager y scheduler
+- **Métricas de nodos**: CPU, memoria, disco y red de los worker nodes
+- **Métricas de pods**: Estado, reintentos, y consumo de recursos
+- **Retención**: 7 días para desarrollo, configurable para producción
+
+#### 2. **Application Load Balancer (ALB)**
+- **Request metrics**: Conteo de requests, latencia, códigos HTTP
+- **Target health**: Estado de salud de los targets backend
+- **Connection metrics**: Conexiones activas, nuevas y rechazadas
+- **Error rates**: 4xx y 5xx errors para detección de problemas
+
+#### 3. **NAT Gateway**
+- **Network throughput**: Bytes enviados y recibidos
+- **Connection tracking**: Conexiones activas y establecidas
+- **Packet metrics**: Paquetes procesados y descartados
+- **Error monitoring**: Detección de fallos en conectividad de salida
+
+### Grupos de Logs CloudWatch
+
+Los logs se organizan en grupos específicos para facilitar el análisis:
+
+```
+/aws/eks/prueba_devops-eks/cluster          # Logs del control plane de EKS
+/aws/elasticloadbalancing/app/prueba_devops # Logs del ALB
+/aws/vpc/natgateway/prueba_devops           # Logs del NAT Gateway
+```
+
+### Acceso a Logs y Métricas
+
+**Desde AWS Console:**
+```bash
+1. Navegar a CloudWatch → Log groups
+2. Seleccionar el grupo de logs deseado
+3. Usar CloudWatch Insights para queries avanzadas
+```
+
+**Desde AWS CLI:**
+```bash
+# Ver logs del cluster EKS
+aws logs tail /aws/eks/prueba_devops-eks/cluster --follow
+
+# Ver logs del ALB
+aws logs tail /aws/elasticloadbalancing/app/prueba_devops --follow
+
+# Query con CloudWatch Insights
+aws logs start-query \
+  --log-group-name /aws/eks/prueba_devops-eks/cluster \
+  --start-time $(date -u -d '1 hour ago' +%s) \
+  --end-time $(date -u +%s) \
+  --query-string 'fields @timestamp, @message | filter @message like /error/ | sort @timestamp desc'
+```
+
+**Desde kubectl (logs de aplicación):**
+```bash
+# Logs de pods específicos
+kubectl logs -f deployment/backend -n ns-prueba-tecnica
+kubectl logs -f deployment/frontend -n ns-prueba-tecnica
+
+# Logs de todos los pods de un deployment
+kubectl logs -f -l app=backend -n ns-prueba-tecnica --all-containers=true
+```
+
+### Métricas Clave a Monitorear
+
+| Componente | Métrica | Threshold Recomendado |
+|------------|---------|----------------------|
+| EKS Nodes | CPU Utilization | > 80% |
+| EKS Nodes | Memory Utilization | > 85% |
+| ALB | Target Response Time | > 1s |
+| ALB | HTTP 5xx Errors | > 1% |
+| NAT Gateway | Packets Drop Count | > 0 |
+| Pods | Restart Count | > 3 en 5min |
 
 ---
 
@@ -226,7 +414,7 @@ Content-Type: application/json
 **Response (201):**
 ```json
 {
-  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "id": 1,
   "name": "Juan Pérez",
   "email": "juan@ejemplo.com",
   "created_at": "2024-02-14T12:00:00.000Z",
@@ -245,22 +433,4 @@ Content-Type: application/json
 | DB_PORT     | Puerto MySQL             | 3306      |
 | DB_NAME     | Nombre de la BD          | users_db  |
 | DB_USER     | Usuario MySQL            | root      |
-| DB_PASSWORD | Contraseña MySQL         | root      |
-
----
-
-## Mejores Prácticas Aplicadas
-
-- **Código documentado**: JSDoc en módulos y funciones
-- **Validación de entrada**: nombre, email y formato de UUID
-- **Manejo de errores**: respuestas HTTP coherentes y logging
-- **Seguridad**: usuario no-root en Docker, variables sensibles en Terraform
-- **Docker**: multi-stage build y `.dockerignore`
-- **Terraform**: variables, outputs, tags y validaciones
-- **Base de datos**: índices, constraint UNIQUE en email, inicialización automática del esquema
-
----
-
-## Licencia
-
-MIT
+| DB_PASSWORD | Contraseña MySQL         | root123   |

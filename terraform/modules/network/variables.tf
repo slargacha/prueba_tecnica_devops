@@ -1,5 +1,15 @@
 variable "name_prefix" {
-  description = "Prefijo para nombres de recursos"
+  description = "Prefijo para nombres de recursos (ej: prueba_devops)"
+  type        = string
+}
+
+variable "vpc_name" {
+  description = "Nombre de la VPC"
+  type        = string
+}
+
+variable "region" {
+  description = "Region AWS (para nombres de subnets)"
   type        = string
 }
 
@@ -10,13 +20,13 @@ variable "vpc_cidr" {
 }
 
 variable "enable_nat_gateway" {
-  description = "Crear NAT Gateway para subnets privadas (recomendado para EKS)"
+  description = "Crear NAT Gateway para subnets privadas"
   type        = bool
   default     = true
 }
 
 variable "eks_cluster_name" {
-  description = "Nombre del cluster EKS para etiquetar subnets (opcional)"
+  description = "Nombre del cluster EKS para etiquetar subnets"
   type        = string
   default     = ""
 }

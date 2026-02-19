@@ -1,0 +1,340 @@
+# =============================================================================
+# Pipeline CI/CD - Deploy Infrastructure and Applications
+# Despliega infraestructura con Terraform y aplicaciones en EKS
+# Solo se ejecuta si los tests pasan correctamente
+# =============================================================================
+
+name: CD - Deploy Infrastructure and Applications
+
+# Triggers del pipeline
+on:
+  workflow_dispatch:             # Permite ejecución manual
+  workflow_run:
+    workflows: ["CI - Tests and Quality"]
+    types:
+      - completed
+    branches: [ main, develop ]
+
+# Variables globales del pipeline
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY_BACKEND: prueba_devops-backend
+  ECR_REPOSITORY_FRONTEND: prueba_devops-frontend
+
+jobs:
+  # Verificar que el workflow de CI pasó correctamente
+  check-ci:
+    name: Check CI Status
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    steps:
+    - name: CI passed
+      run: echo "✅ CI workflow pasó correctamente. Procediendo con el despliegue."
+
+  # =============================================================================
+  # Job 1: Construcción y push de imágenes Docker a ECR
+  # =============================================================================
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    needs: [check-ci]
+    if: always() && (needs.check-ci.result == 'success' || github.event_name != 'workflow_run')
+    outputs:
+      backend-image: ${{ steps.build-backend.outputs.image }}   # URL completa imagen backend
+      frontend-image: ${{ steps.build-frontend.outputs.image }} # URL completa imagen frontend
+    
+    steps:
+    # Checkout del código fuente
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Configuración de credenciales AWS
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    # Login a Amazon ECR
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    # Crear repositorios ECR si no existen (fallback por si Terraform no los creó)
+    - name: Create ECR repositories if they don't exist
+      run: |
+        # Crear repositorio backend si no existe
+        aws ecr describe-repositories --repository-names $ECR_REPOSITORY_BACKEND --region $AWS_REGION || \
+        aws ecr create-repository --repository-name $ECR_REPOSITORY_BACKEND --region $AWS_REGION
+        
+        # Crear repositorio frontend si no existe
+        aws ecr describe-repositories --repository-names $ECR_REPOSITORY_FRONTEND --region $AWS_REGION || \
+        aws ecr create-repository --repository-name $ECR_REPOSITORY_FRONTEND --region $AWS_REGION
+
+    # Construcción y push de imagen del backend
+    - name: Build and push backend image
+      id: build-backend
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}  # Usa el SHA del commit como tag
+      run: |
+        cd backend
+        # Construir imagen Docker
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG .
+        # Push a ECR
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG
+        # Guardar URL completa para jobs posteriores
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+    # Construcción y push de imagen del frontend
+    - name: Build and push frontend image
+      id: build-frontend
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}  # Usa el SHA del commit como tag
+      run: |
+        cd frontend
+        # Construir imagen Docker
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG .
+        # Push a ECR
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG
+        # Guardar URL completa para jobs posteriores
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+  # =============================================================================
+  # Job 2: Verificar y desplegar infraestructura con Terraform (solo si es necesario)
+  # =============================================================================
+  deploy-infrastructure:
+    name: Deploy Terraform Infrastructure
+    runs-on: ubuntu-latest
+    needs: build-and-push  # Depende del job anterior
+    outputs:
+      cluster-name: ${{ steps.get-cluster.outputs.cluster-name }}  # Nombre del cluster EKS
+      infrastructure-exists: ${{ steps.check-infra.outputs.exists }}  # Si la infraestructura existe
+      
+    steps:
+    # Checkout del código fuente
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Configuración de credenciales AWS
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    # Obtener nombre del cluster
+    - name: Get cluster name
+      id: get-cluster
+      run: |
+        echo "cluster-name=prueba_devops-eks" >> $GITHUB_OUTPUT
+
+    # Instalación de Terraform
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.5.0
+        terraform_wrapper: false
+
+    # Activar backend S3 descomentando la configuración
+    - name: Enable S3 Backend
+      run: |
+        cd terraform
+        sed -i 's/^# terraform {/terraform {/' backend.tf
+        sed -i 's/^#   backend/  backend/' backend.tf
+        sed -i 's/^#     /    /' backend.tf
+        sed -i 's/^#   }/  }/' backend.tf
+        sed -i 's/^# }/}/' backend.tf
+
+    # Inicialización de Terraform
+    - name: Terraform Init
+      run: |
+        cd terraform
+        terraform init
+
+    # Plan de Terraform
+    - name: Terraform Plan
+      run: |
+        cd terraform
+        terraform plan -var="aws_region=${{ env.AWS_REGION }}" -out=tfplan
+
+    # Aplicación de Terraform
+    # IMPORTANTE: Esto actualiza automáticamente todas las políticas IAM,
+    # incluyendo las del ALB Controller con los permisos necesarios:
+    # - ec2:GetSecurityGroupsForVpc
+    # - elasticloadbalancing:DescribeListenerAttributes
+    # - elasticloadbalancing:AddTags (con condiciones correctas)
+    - name: Terraform Apply
+      run: |
+        cd terraform
+        terraform apply -auto-approve tfplan
+
+  # =============================================================================
+  # Job 3: Despliegue/Actualización de aplicaciones en Kubernetes
+  # =============================================================================
+  deploy-k8s:
+    name: Deploy Kubernetes Manifests
+    runs-on: ubuntu-latest
+    needs: [build-and-push, deploy-infrastructure]  # Depende de ambos jobs anteriores
+    
+    steps:
+    # Checkout del código fuente
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Configuración de credenciales AWS
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    # Configuración de kubectl para conectar al cluster EKS
+    - name: Update kubeconfig
+      run: |
+        aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ needs.deploy-infrastructure.outputs.cluster-name }}
+
+    # Instalar AWS Load Balancer Controller con Helm
+    - name: Install AWS Load Balancer Controller
+      run: |
+        # Verificar si ya está instalado
+        if ! kubectl get deployment aws-load-balancer-controller -n kube-system >/dev/null 2>&1; then
+          echo "📦 Instalando AWS Load Balancer Controller..."
+          helm repo add eks https://aws.github.io/eks-charts
+          helm repo update
+          helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
+            -n kube-system \
+            --set clusterName=${{ needs.deploy-infrastructure.outputs.cluster-name }} \
+            --set serviceAccount.create=false \
+            --set serviceAccount.name=aws-load-balancer-controller
+          
+          echo "⏳ Esperando a que el controller esté listo..."
+          kubectl wait --for=condition=available --timeout=300s deployment/aws-load-balancer-controller -n kube-system
+          echo "✅ AWS Load Balancer Controller instalado"
+        else
+          echo "✅ AWS Load Balancer Controller ya está instalado"
+        fi
+
+    # Verificar si las aplicaciones ya están desplegadas
+    - name: Check if applications are already deployed
+      id: check-apps
+      run: |
+        if kubectl get deployment backend -n ns-prueba-tecnica >/dev/null 2>&1; then
+          echo "deployed=true" >> $GITHUB_OUTPUT
+          echo "✅ Aplicaciones ya desplegadas, actualizando imágenes"
+        else
+          echo "deployed=false" >> $GITHUB_OUTPUT
+          echo "🚀 Primera vez desplegando aplicaciones"
+        fi
+
+    # Actualización de placeholders en manifiestos con URLs reales de imágenes
+    - name: Update image tags in manifests
+      if: steps.check-apps.outputs.deployed == 'false'
+      run: |
+        cd k8s
+        # Reemplazar placeholder del backend con URL real de la imagen
+        sed -i "s|BACKEND_IMAGE_PLACEHOLDER|${{ needs.build-and-push.outputs.backend-image }}|g" backend-deployment.yaml
+        # Reemplazar placeholder del frontend con URL real de la imagen
+        sed -i "s|FRONTEND_IMAGE_PLACEHOLDER|${{ needs.build-and-push.outputs.frontend-image }}|g" frontend-deployment.yaml
+        # Reemplazar placeholder del ALB Controller Role ARN
+        ALB_ROLE_ARN=$(aws iam get-role --role-name prueba_devops-alb-controller-role --query 'Role.Arn' --output text)
+        sed -i "s|REPLACE_WITH_ROLE_ARN|$ALB_ROLE_ARN|g" alb-controller-serviceaccount.yaml
+
+    # Despliegue inicial de todos los manifiestos (solo primera vez)
+    - name: Deploy to Kubernetes (Initial deployment)
+      if: steps.check-apps.outputs.deployed == 'false'
+      run: |
+        cd k8s
+        # Aplicar manifiestos en orden de dependencias
+        kubectl apply -f namespace.yaml              # Crear namespace
+        kubectl apply -f mysql-secret.yaml           # Secretos de MySQL
+        kubectl apply -f mysql-configmap.yaml        # Configuración de MySQL
+        kubectl apply -f backend-secret.yaml         # Secretos del backend
+        kubectl apply -f mysql-deployment.yaml       # Despliegue de MySQL
+        kubectl apply -f mysql-service.yaml          # Servicio de MySQL
+        kubectl apply -f backend-deployment.yaml     # Despliegue del backend
+        kubectl apply -f backend-service.yaml        # Servicio del backend
+        kubectl apply -f frontend-deployment.yaml    # Despliegue del frontend
+        kubectl apply -f frontend-service.yaml       # Servicio del frontend
+        kubectl apply -f alb-controller-serviceaccount.yaml  # ServiceAccount para ALB Controller
+        kubectl apply -f ingress.yaml                # Ingress para exponer aplicación
+        
+        echo "📊 Estado inicial de los pods:"
+        kubectl get pods -n ns-prueba-tecnica
+        echo ""
+        echo "📊 Eventos recientes:"
+        kubectl get events -n ns-prueba-tecnica --sort-by='.lastTimestamp' | tail -20
+
+    # Actualización rápida de imágenes (cuando ya está desplegado)
+    - name: Update application images (Rolling update)
+      if: steps.check-apps.outputs.deployed == 'true'
+      run: |
+        # Actualizar imagen del backend y forzar restart
+        kubectl set image deployment/backend backend=${{ needs.build-and-push.outputs.backend-image }} -n ns-prueba-tecnica
+        kubectl rollout restart deployment/backend -n ns-prueba-tecnica
+        
+        # Actualizar imagen del frontend y forzar restart
+        kubectl set image deployment/frontend frontend=${{ needs.build-and-push.outputs.frontend-image }} -n ns-prueba-tecnica
+        kubectl rollout restart deployment/frontend -n ns-prueba-tecnica
+        
+        echo "🔄 Rolling update iniciado para backend y frontend"
+
+    # Esperar a que los deployments estén listos
+    - name: Wait for deployments
+      run: |
+        echo "⏳ Esperando a que MySQL esté listo..."
+        kubectl wait --for=condition=available --timeout=600s deployment/mysql -n ns-prueba-tecnica || {
+          echo "❌ MySQL no está listo, mostrando logs:"
+          kubectl describe pod -l app=mysql -n ns-prueba-tecnica
+          kubectl logs -l app=mysql -n ns-prueba-tecnica --tail=50
+          exit 1
+        }
+        
+        echo "⏳ Esperando a que Backend esté listo..."
+        kubectl wait --for=condition=available --timeout=300s deployment/backend -n ns-prueba-tecnica || {
+          echo "❌ Backend no está listo, mostrando logs:"
+          kubectl describe pod -l app=backend -n ns-prueba-tecnica
+          kubectl logs -l app=backend -n ns-prueba-tecnica --tail=50
+          exit 1
+        }
+        
+        echo "⏳ Esperando a que Frontend esté listo..."
+        kubectl wait --for=condition=available --timeout=300s deployment/frontend -n ns-prueba-tecnica || {
+          echo "❌ Frontend no está listo, mostrando logs:"
+          kubectl describe pod -l app=frontend -n ns-prueba-tecnica
+          kubectl logs -l app=frontend -n ns-prueba-tecnica --tail=50
+          exit 1
+        }
+        
+        echo "✅ Todos los deployments están listos"
+
+    # Verificación del estado final del despliegue
+    - name: Get service status
+      run: |
+        echo "📊 Estado final del despliegue:"
+        # Mostrar estado de pods, servicios e ingress
+        kubectl get pods -n ns-prueba-tecnica
+        kubectl get services -n ns-prueba-tecnica
+        kubectl get ingress -n ns-prueba-tecnica
+        
+        # Mostrar las imágenes actuales en los deployments
+        echo "📷 Imágenes actuales:"
+        kubectl get deployment backend -n ns-prueba-tecnica -o jsonpath='{.spec.template.spec.containers[0].image}'
+        echo ""
+        kubectl get deployment frontend -n ns-prueba-tecnica -o jsonpath='{.spec.template.spec.containers[0].image}'
+        
+        # Mostrar URL de acceso a la aplicación
+        echo "🌐 URL de acceso a la aplicación:"
+        ALB_URL=$(kubectl get ingress app-ingress -n ns-prueba-tecnica -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        if [ ! -z "$ALB_URL" ]; then
+          echo "✅ Aplicación disponible en: http://$ALB_URL"
+          echo "📱 Frontend: http://$ALB_URL"
+          echo "🔌 API: http://$ALB_URL/api"
+        else
+          echo "⏳ ALB aún no tiene hostname asignado. Espera unos minutos y verifica:"
+          echo "kubectl get ingress app-ingress -n ns-prueba-tecnica"
+        fi

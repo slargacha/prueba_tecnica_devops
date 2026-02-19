@@ -5,24 +5,7 @@
 variable "aws_region" {
   description = "Region AWS"
   type        = string
-  default     = "eu-west-1"
-}
-
-variable "environment" {
-  description = "Entorno (dev, staging, prod)"
-  type        = string
-  default     = "dev"
-
-  validation {
-    condition     = contains(["dev", "staging", "prod"], var.environment)
-    error_message = "El entorno debe ser: dev, staging o prod."
-  }
-}
-
-variable "project_name" {
-  description = "Nombre del proyecto"
-  type        = string
-  default     = "user-management"
+  default     = "us-east-1"
 }
 
 variable "vpc_cidr" {
@@ -32,7 +15,7 @@ variable "vpc_cidr" {
 }
 
 variable "enable_nat_gateway" {
-  description = "Habilitar NAT Gateway para subnets privadas (requerido para EKS)"
+  description = "Habilitar NAT Gateway para subnets privadas"
   type        = bool
   default     = true
 }
@@ -45,9 +28,9 @@ variable "kubernetes_version" {
 }
 
 variable "eks_instance_types" {
-  description = "Tipos de instancia para nodos EKS"
+  description = "Tipos de instancia para nodos EKS (t3.small tiene más capacidad que t3.micro)"
   type        = list(string)
-  default     = ["t3.medium"]
+  default     = ["t3.small"]
 }
 
 variable "eks_node_desired_size" {
@@ -59,11 +42,24 @@ variable "eks_node_desired_size" {
 variable "eks_node_min_size" {
   description = "Numero minimo de nodos EKS"
   type        = number
-  default     = 1
+  default     = 2
 }
 
 variable "eks_node_max_size" {
   description = "Numero maximo de nodos EKS"
   type        = number
   default     = 3
+}
+
+# Monitoring
+variable "log_retention_days" {
+  description = "Días de retención para logs en CloudWatch"
+  type        = number
+  default     = 7
+}
+
+variable "enable_eks_logging" {
+  description = "Habilitar logging del control plane de EKS"
+  type        = bool
+  default     = true
 }

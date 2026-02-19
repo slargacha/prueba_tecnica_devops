@@ -1,0 +1,116 @@
+# =============================================================================
+# Pipeline de Integración Continua (CI)
+# Ejecuta tests, linting, análisis de seguridad y SonarQube antes del deploy
+# =============================================================================
+
+name: CI - Tests and Quality
+
+# Eventos que disparan el pipeline
+on:
+  push:
+    branches: [ main, develop ]  # Se ejecuta cuando hay push a main o develop
+  pull_request:
+    branches: [ main ]           # Se ejecuta en PRs hacia main
+  workflow_dispatch:             # Permite ejecución manual desde GitHub UI
+
+jobs:
+  # =============================================================================
+  # Job único: Testing, Linting, Security y Análisis de Calidad
+  # =============================================================================
+  test-and-quality:
+    name: Tests, Lint & Security
+    runs-on: ubuntu-latest  # Ejecuta en la última versión de Ubuntu
+    
+    steps:
+    # -------------------------------------------------------------------------
+    # Paso 1: Obtener el código del repositorio
+    # fetch-depth: 0 descarga todo el historial (necesario para SonarQube)
+    # -------------------------------------------------------------------------
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Historial completo para análisis de SonarQube
+
+    # -------------------------------------------------------------------------
+    # Paso 2: Configurar Node.js 20 con caché de dependencias
+    # El caché acelera las ejecuciones posteriores del pipeline
+    # -------------------------------------------------------------------------
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'  # Versión de Node.js
+        cache: 'npm'        # Habilita caché de npm
+        cache-dependency-path: backend/package-lock.json  # Ruta del lock file
+
+    # -------------------------------------------------------------------------
+    # Paso 3: Instalar dependencias del backend
+    # npm ci es más rápido y confiable que npm install en CI/CD
+    # -------------------------------------------------------------------------
+    - name: Install dependencies
+      run: |
+        cd backend
+        npm ci  # Clean install basado en package-lock.json
+
+    # -------------------------------------------------------------------------
+    # Paso 4: Ejecutar ESLint para verificar estándares de código
+    # Detecta errores de sintaxis, malas prácticas y problemas de estilo
+    # -------------------------------------------------------------------------
+    - name: Run ESLint
+      run: |
+        cd backend
+        npm run lint  # Ejecuta eslint según configuración en .eslintrc.js
+
+    # -------------------------------------------------------------------------
+    # Paso 5: Ejecutar tests unitarios e integración con cobertura
+    # Genera reportes de cobertura en formato LCOV para SonarQube
+    # -------------------------------------------------------------------------
+    - name: Run tests with coverage
+      run: |
+        cd backend
+        npm test  # Ejecuta Jest con cobertura (configurado en package.json)
+
+    # -------------------------------------------------------------------------
+    # Paso 6: Análisis de seguridad de dependencias
+    # Detecta vulnerabilidades conocidas en paquetes npm
+    # || true evita que el pipeline falle si hay vulnerabilidades menores
+    # -------------------------------------------------------------------------
+    - name: Security audit
+      run: |
+        cd backend
+        npm audit --audit-level=moderate || true  # Reporta pero no falla el build
+
+    # -------------------------------------------------------------------------
+    # Paso 7: Análisis de calidad de código con SonarQube Cloud
+    # Analiza código, detecta bugs, vulnerabilidades y code smells
+    # -------------------------------------------------------------------------
+    - name: SonarQube Scan
+      uses: SonarSource/sonarqube-scan-action@master
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: https://sonarcloud.io
+
+    # -------------------------------------------------------------------------
+    # Paso 8: Subir reporte de cobertura como artifact
+    # Permite descargar y revisar el reporte HTML desde GitHub Actions
+    # -------------------------------------------------------------------------
+    - name: Upload coverage to artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report           # Nombre del artifact
+        path: backend/coverage/         # Directorio con reportes de cobertura
+
+    # -------------------------------------------------------------------------
+    # Paso 9: Comentar en el PR con resultados de tests (solo en PRs)
+    # Proporciona feedback inmediato al desarrollador
+    # -------------------------------------------------------------------------
+    - name: Comment PR with test results
+      if: github.event_name == 'pull_request'  # Solo ejecuta en PRs
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '✅ Tests ejecutados correctamente. Análisis de SonarQube completado. Revisa el reporte de cobertura en los artifacts.'
+          });

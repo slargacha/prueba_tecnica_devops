@@ -27,7 +27,7 @@ variable "kubernetes_version" {
 variable "instance_types" {
   description = "Tipos de instancia para los nodos"
   type        = list(string)
-  default     = ["t3.medium"]
+  default     = ["t3.micro"]
 }
 
 variable "node_desired_size" {
@@ -39,7 +39,7 @@ variable "node_desired_size" {
 variable "node_min_size" {
   description = "Número mínimo de nodos"
   type        = number
-  default     = 1
+  default     = 2
 }
 
 variable "node_max_size" {
