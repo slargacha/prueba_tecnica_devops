@@ -15,6 +15,8 @@ Aplicación de gestión de usuarios con **arquitectura de 3 capas**: Frontend (n
 - [Monitoreo y Observabilidad](#monitoreo-y-observabilidad)
 - [API Reference](#api-reference)
 - [Variables de Entorno](#variables-de-entorno)
+- [Despliegue en ECS (Manual)](#-despliegue-en-ecs-manual)
+- [Enlaces de Despliegue](#-enlaces-de-despliegue)
 
 ---
 
@@ -425,30 +427,6 @@ kubectl logs -f -l app=backend -n ns-prueba-tecnica --all-containers=true
 | PUT    | /users/:id  | Actualizar usuario |
 | DELETE | /users/:id  | Eliminar usuario   |
 
-### Crear usuario
-
-**Request:**
-```json
-POST /users
-Content-Type: application/json
-
-{
-  "name": "Juan Pérez",
-  "email": "juan@ejemplo.com"
-}
-```
-
-**Response (201):**
-```json
-{
-  "id": 1,
-  "name": "Juan Pérez",
-  "email": "juan@ejemplo.com",
-  "created_at": "2024-02-14T12:00:00.000Z",
-  "updated_at": "2024-02-14T12:00:00.000Z"
-}
-```
-
 ---
 
 ## Variables de Entorno
@@ -461,3 +439,25 @@ Content-Type: application/json
 | DB_NAME     | Nombre de la BD          | users_db  |
 | DB_USER     | Usuario MySQL            | root      |
 | DB_PASSWORD | Contraseña MySQL         | root123   |
+
+---
+
+## 🚢 Despliegue en ECS (Manual)
+
+Adicionalmente al despliegue automatizado en EKS, se realizó un despliegue manual en **AWS ECS (Elastic Container Service)** para demostrar una estrategia alternativa de orquestación de contenedores.
+
+### Configuración realizada
+
+- Se crearon **3 definiciones de tareas (Task Definitions)**: una para el frontend, una para el backend y una para MySQL, cada una con su imagen Docker correspondiente en ECR.
+- Se crearon **3 servicios ECS**, cada uno configurado con las **3 subnets privadas** distribuidas en distintas Availability Zones, permitiendo que ECS distribuya las tareas entre ellas para garantizar alta disponibilidad.
+- Se configuró un **Application Load Balancer (ALB)** en las **3 subnets públicas** para exponer la aplicación al exterior y distribuir el tráfico entre los servicios.
+
+---
+
+## 🌐 Enlaces de Despliegue
+
+- **Despliegue en AWS EKS (Terraform):**
+  [http://k8s-nsprueba-appingre-a57b194ed1-427444934.us-east-1.elb.amazonaws.com/](http://k8s-nsprueba-appingre-a57b194ed1-427444934.us-east-1.elb.amazonaws.com/)
+
+- **Despliegue manual en AWS ECS:**
+  [http://ecs-prueba-devops-alb-2045625510.us-east-1.elb.amazonaws.com/](http://ecs-prueba-devops-alb-2045625510.us-east-1.elb.amazonaws.com/)
